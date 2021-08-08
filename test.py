@@ -12,11 +12,11 @@ from tensorflow.keras.metrics import BinaryAccuracy, AUC
 
 def get_data():
     file = pd.read_csv('../data/adult.data', header=None)
+
     X = file.loc[:, 0:13]
     Y = file.loc[:, 14].map({' <=50K': 0, ' >50K': 1})
     X.columns = config.ALL_FIELDS
     field_dict, field_index, X_modified = get_modified_data(X, config.ALL_FIELDS, config.CONT_FIELDS, config.CAT_FIELDS, False)
-
     X_train, X_test, Y_train, Y_test = train_test_split(X_modified, Y, test_size=0.2, stratify=Y)
     train_ds = tf.data.Dataset.from_tensor_slices(
         (tf.cast(X_train.values, tf.float32), tf.cast(Y_train, tf.float32))) \
@@ -73,6 +73,7 @@ def train(epochs):
     test_acc = BinaryAccuracy(threshold=0.5)
     test_auc = AUC()
     for x, y in test_ds:
+        print(x)
         y_pred = model(x)
         test_acc.update_state(y, y_pred)
         test_auc.update_state(y, y_pred)
@@ -81,24 +82,24 @@ def train(epochs):
     print("Batch Size: {}, Embedding Size: {}".format(config.BATCH_SIZE, config.EMBEDDING_SIZE))
     print("걸린 시간: {:.3f}".format(perf_counter() - start))
     model.compile(optimizer='SGD', loss='binary_crossentropy', metrics=['accuracy'])
-    model.save('../weights/weights-epoch({})-batch({})-embedding({}).h5py'.format(
+    model.save('../weights/weights-epoch({})-batch({})-embedding({})2.h5py'.format(
         epochs, config.BATCH_SIZE, config.EMBEDDING_SIZE))
 
+
 if __name__ == '__main__':
-    # train(epochs=100)
-    load_model = tf.keras.models.load_model('../weights/weights-epoch(100)-batch(256)-embedding(5).h5py')
-    print(load_model)
+    # train(epochs=1000)
+    load_model = tf.keras.models.load_model('../weights/weights-epoch(1000)-batch(256)-embedding(5)2.h5py')
+
     file = pd.read_csv('../data/adult.data', header=None)
     X = file.loc[:, 0:13]
     X.columns = config.ALL_FIELDS
-    test_data = pd.DataFrame([[10, ' Private', ' 160187', ' 9th', 5, ' Married-spouse-absent', ' Other-service', ' Not-in-family', ' Black', ' Female', 0, 0, 16, ' Jamaica']], columns=config.ALL_FIELDS)
-    dt = ['int64', 'object', 'int64', 'object', 'int64', 'object', 'object', 'object', 'object', 'object', 'int64', 'int64', 'int64', 'object']
-    at = dict(zip(config.ALL_FIELDS, dt))
-    test_data = test_data.astype(at)
+
+    field_dict, field_index, X_modified = get_modified_data(X, config.ALL_FIELDS, config.CONT_FIELDS, config.CAT_FIELDS, False)
+    # print(X_modified.columns)
+
+    test_data = pd.DataFrame([[30, ' State-gov', ' 141297', ' Bachelors', 13, ' Married-civ-spouse', ' Prof-specialty', ' Husband', ' Asian-Pac-Islander', ' Male', 0, 0, 40, ' India']], columns=config.ALL_FIELDS)
+    test_data = test_data.astype(dict(zip(config.ALL_FIELDS, config.DATA_TYPES)))
     X = X.append(test_data, ignore_index=True)
     _, _, test_data = get_modified_data(X, config.ALL_FIELDS, config.CONT_FIELDS, config.CAT_FIELDS, False)
+    test_data = pd.DataFrame(test_data.iloc[-1]).transpose()
     print(load_model.predict(test_data))
-    predict = load_model.predict(test_data)
-    print(list(predict).index(max(predict)))
-
-    # # load_model.predict(test_data)
